@@ -11,7 +11,6 @@ type BreakTime = {
 
 function SetupBlindStructure() {
     const tournament = useTournament();
-    const [roundLength, setRoundLength] = useState<number>(20);
     const [tournamentLength, setTournamentLength] = useState<number>(4);
     const [startingStack, setStartingStack] = useState<number>(10000);
     const [startingSmallBlind, setStartingSmallBlind] = useState<number>(25);
@@ -25,11 +24,13 @@ function SetupBlindStructure() {
         { minutesIn: 180, breakLength: 15 },
     ]);
     const [blindStructure, setBlindStructure] = useState<number[][]>([]);
+    const [tournamentLengthInput, setTournamentLengthInput] = useState<string>(tournamentLength.toString());
+    const [roundLengthInput, setRoundLengthInput] = useState<string>(tournament.state.roundLengthInput);
 
     useEffect(() => {
         calculateAndSetBlindStructure();
     }, [
-        roundLength,
+        tournament.state.roundLengthInput,
         tournamentLength,
         startingStack,
         startingSmallBlind,
@@ -39,28 +40,52 @@ function SetupBlindStructure() {
         anteStartLevel,
     ]);
 
+    useEffect(() => {
+        setTournamentLengthInput(tournamentLength.toString());
+    }, [tournamentLength]);
+
+    useEffect(() => {
+        setRoundLengthInput(tournament.state.roundLengthInput);
+    }, [tournament.state.roundLengthInput]);
+
     const calculateAndSetBlindStructure = () => {
         const totalMinutes = tournamentLength * 60;
+        const roundLength = Number(tournament.state.roundLengthInput);
         const rounds = Math.ceil(totalMinutes / roundLength);
         const newBlindStructure: number[][] = [];
 
         let currentSmallBlind = startingSmallBlind;
         let currentBigBlind = startingBigBlind;
         let currentAnte = startingAnte;
+        const chips = tournament.state.chips;
+        let chipIndex = 0;
+        let currentSmallestChip = chips[chipIndex]?.value || 1;
 
         for (let i = 0; i < rounds; i++) {
             const level = i + 1;
             const ante = level >= anteStartLevel ? currentSmallBlind : 0;
             newBlindStructure.push([currentSmallBlind, currentBigBlind, ante]);
 
-            // Apply multiplier every round
-            currentSmallBlind = Math.floor((currentSmallBlind * blindMultiplier) / 5) * 5;
+            // Calculate next small blind
+            let nextBlind = currentSmallBlind * blindMultiplier;
+            const magnitude = Math.pow(10, Math.floor(Math.log10(nextBlind)));
+            let rounded = Math.round(nextBlind / currentSmallestChip) * currentSmallestChip;
+            if (rounded < magnitude / 2) rounded = magnitude / 2;
+            if (rounded > magnitude * 10) rounded = magnitude * 10;
+            if (rounded <= currentSmallBlind) rounded = currentSmallBlind + currentSmallestChip;
+
+            // Promote chip if needed for next level
+            if (chipIndex < chips.length - 1 && currentSmallestChip < rounded / 5) {
+                chipIndex++;
+                currentSmallestChip = chips[chipIndex].value;
+            }
+
+            currentSmallBlind = rounded;
             currentBigBlind = currentSmallBlind * 2;
         }
 
         setBlindStructure(newBlindStructure);
         tournament.setBlinds(newBlindStructure);
-        tournament.setRoundLength(roundLength);
         tournament.setTournamentLength(tournamentLength);
         tournament.setStartingStack(startingStack);
         tournament.setRestBreaks(breakTimes);
@@ -80,7 +105,6 @@ function SetupBlindStructure() {
     };
 
     const handlePresetSelect = (preset: any) => {
-        setRoundLength(preset.roundLength);
         setTournamentLength(preset.tournamentLength);
         setStartingStack(preset.startingStack);
         setStartingSmallBlind(preset.startingSmallBlind);
@@ -96,11 +120,11 @@ function SetupBlindStructure() {
         level[0].toString(),
         level[1].toString(),
         level[2].toString(),
-        formatTime(index * roundLength),
+        formatTime(index * Number(tournament.state.roundLengthInput)),
     ]);
 
     const currentSettings = {
-        roundLength,
+        roundLength: Number(tournament.state.roundLengthInput),
         tournamentLength,
         startingStack,
         startingSmallBlind,
@@ -120,20 +144,38 @@ function SetupBlindStructure() {
                 <div className="flex flex-col gap-4">
                     <div>
                         <div className="opacity-60 mb-2">Round Length (minutes)</div>
-                        <Input
+                        <input
                             type="number"
-                            value={roundLength.toString()}
-                            onChange={(e) => setRoundLength(Number(e.target.value))}
-                            min={5}
+                            value={roundLengthInput}
+                            onChange={(e) => setRoundLengthInput(e.target.value)}
+                            onBlur={() => {
+                                const value = parseFloat(roundLengthInput);
+                                if (!isNaN(value) && value > 0) {
+                                    tournament.validateAndUpdateRoundLength(roundLengthInput);
+                                } else {
+                                    setRoundLengthInput(tournament.state.roundLengthInput);
+                                }
+                            }}
+                            min={0.5}
                             max={60}
+                            step={0.5}
+                            placeholder="e.g. 0.5 for 30 seconds"
+                            className="block border-0 bg-neutral-800 py-1.5 pl-3 rounded-md w-full text-white placeholder:text-gray-400"
                         />
                     </div>
                     <div>
                         <div className="opacity-60 mb-2">Tournament Length (hours)</div>
                         <Input
                             type="number"
-                            value={tournamentLength.toString()}
-                            onChange={(e) => setTournamentLength(Number(e.target.value))}
+                            value={tournamentLengthInput}
+                            onChange={(e) => {
+                                const value = e.target.value;
+                                setTournamentLengthInput(value);
+                                if (value === "" || isNaN(Number(value)) || Number(value) <= 0) {
+                                    return;
+                                }
+                                setTournamentLength(Number(value));
+                            }}
                             min={1}
                             max={12}
                         />

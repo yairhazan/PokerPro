@@ -3,22 +3,29 @@ import { BsXCircle, BsPencilSquare } from "react-icons/bs";
 import { useEffect, useState } from "react";
 import { useTournament } from "../providers/TournamentProvider";
 import IncrementInput from "./IncrementInput";
+import Tooltip from "./Tooltip";
 
 type Props = {
     name: string;
     eliminated: boolean;
     variant?: "large";
+    showEliminate?: boolean;
 };
 
-function PlayerInfoCard({ name, eliminated, variant }: Props) {
-    const { state, setPlayerRebuys, setPlayerName } = useTournament();
+function PlayerInfoCard({ name, eliminated, variant, showEliminate }: Props) {
+    const { state, setPlayerRebuys, setPlayerName, setPlayersRemaining } = useTournament();
     const playerId = parseInt(name) - 1;
     const [cardHover, setCardHover] = useState<boolean>(false);
     const [eliminateButtonHover, setEliminateButtonHover] = useState<boolean>(false);
     const [isEditingName, setIsEditingName] = useState<boolean>(false);
+    const [isEliminated, setIsEliminated] = useState<boolean>(eliminated);
 
     const handleRebuyChange = (val: number) => {
         setPlayerRebuys(playerId, val);
+        if (isEliminated && val > 0) {
+            setIsEliminated(false);
+            setPlayersRemaining(state.playersRemaining + 1);
+        }
     };
 
     const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -31,11 +38,16 @@ function PlayerInfoCard({ name, eliminated, variant }: Props) {
         }
     };
 
+    const handleEliminate = () => {
+        setIsEliminated(true);
+        setPlayersRemaining(state.playersRemaining - 1);
+    };
+
     const cardClass = variant === "large"
         ? `relative flex flex-col items-start justify-between min-w-[280px] max-w-[360px] h-[220px] bg-neutral-900 border-2 border-blue-500/60 rounded-2xl shadow-xl px-8 py-6 mx-3 my-4 transition-all duration-150 ` +
-          (eliminated ? 'opacity-50 grayscale' : 'hover:border-blue-400')
+          (isEliminated ? 'opacity-50 grayscale' : 'hover:border-blue-400')
         : `relative flex flex-col items-start justify-between min-w-[200px] max-w-[260px] h-[140px] bg-neutral-900 border border-blue-900 rounded-lg shadow-sm px-5 py-4 mx-2 my-3 transition-all duration-150 ` +
-          (eliminated ? 'opacity-50 grayscale' : 'hover:border-blue-400');
+          (isEliminated ? 'opacity-50 grayscale' : 'hover:border-blue-400');
 
     return (
         <div
@@ -74,13 +86,16 @@ function PlayerInfoCard({ name, eliminated, variant }: Props) {
                     onSubmit={handleRebuyChange}
                 />
             </div>
-            {eliminated && (
-                <button
-                    className="absolute top-2 right-2 text-xs text-red-400 hover:text-red-300 px-1 py-0.5 rounded"
-                    aria-label="Eliminate player"
-                >
-                    ×
-                </button>
+            {showEliminate && !isEliminated && (
+                <Tooltip text="Eliminate Player" waitTime={300}>
+                    <button
+                        className="absolute top-2 right-2 w-10 h-10 flex items-center justify-center bg-red-600 hover:bg-red-700 text-white rounded-full shadow-lg text-2xl transition-all z-20 border-2 border-red-700"
+                        aria-label="Eliminate player"
+                        onClick={handleEliminate}
+                    >
+                        <BsXCircle size={28} />
+                    </button>
+                </Tooltip>
             )}
         </div>
     );

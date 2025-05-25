@@ -14,7 +14,13 @@ import Tooltip from "./Tooltip";
 import nextRound from "../assets/audio/next_round.wav";
 import beep from "../assets/audio/beep.wav";
 
-function BlindLevelCountdown() {
+// Add new props for confirmation and clock control
+interface BlindLevelCountdownProps {
+    onRequestBlindAdvance?: (nextRound: number, nextSmallBlind: number) => boolean | void;
+    isClockPaused?: boolean;
+}
+
+function BlindLevelCountdown({ onRequestBlindAdvance, isClockPaused }: BlindLevelCountdownProps) {
     const { state, setCurrentRound, setOnBreak: setTournamentOnBreak } = useTournament();
     const restBreaks = state.blindStructure.restBreaks;
 
@@ -27,6 +33,15 @@ function BlindLevelCountdown() {
 
     const timer = useTimer();
     const breakTimer = useTimer();
+
+    // Pause timer if isClockPaused is true
+    useEffect(() => {
+        if (isClockPaused) {
+            if (timer.state === TimerState.ACTIVE) timer.togglePause();
+        } else {
+            if (timer.state === TimerState.PAUSED) timer.togglePause();
+        }
+    }, [isClockPaused]);
 
     const isBreakIncoming = (idxOffset: number = 0) =>
         restBreaks[getNextBreakIdx() + idxOffset] !== undefined;
@@ -72,7 +87,13 @@ function BlindLevelCountdown() {
             }
 
             setTimeout(() => {
-                setBlindLevel((prev) => prev + 1);
+                const nextRound = blindLevel + 1;
+                const nextSmallBlind = state.blindStructure.structure[nextRound]?.[0];
+                if (onRequestBlindAdvance) {
+                    const shouldAdvance = onRequestBlindAdvance(nextRound, nextSmallBlind);
+                    if (shouldAdvance === false) return;
+                }
+                setBlindLevel(nextRound);
             }, 1000);
         } else if (!isMuted && getRoundTimeLeft() < 10000) {
             const underTenSound = new Audio(beep);
@@ -170,7 +191,7 @@ function BlindLevelCountdown() {
     };
 
     return (
-        <div className="relative flex flex-col justify-center bg-neutral-900 px-20 p-10 rounded-lg w-full h-full overflow-hidden">
+        <div className="relative flex flex-col justify-center bg-neutral-900 px-4 py-6 md:px-20 md:p-10 rounded-lg w-full h-full overflow-hidden">
             {/* Background Progress Bar */}
             <div
                 className={`top-0 left-1/2 absolute ${
@@ -186,70 +207,36 @@ function BlindLevelCountdown() {
                     }%`,
                 }}
             />
-            <div className="relative flex justify-between items-center">
-                {/* Timer */}
-                <div className="top-1/2 left-1/2 absolute flex flex-col items-center gap-5 -translate-x-1/2 -translate-y-1/2">
+            <div className="relative flex flex-col items-center justify-center w-full h-full min-h-[400px]">
+                {/* Timer Center */}
+                <div className="flex flex-col items-center justify-center flex-1 min-w-[340px] md:min-w-[420px] gap-6 z-10">
                     <div>
-                        <h4 className="mb-3 text-2xl text-center text-neutral-600 italic">
-                            Next Break
-                        </h4>
+                        <h4 className="mb-3 text-2xl text-center text-neutral-600 italic">Next Break</h4>
                         {onBreak ? (
-                            <div className="opacity-25 font-mono text-[70px] leading-none">
-                                Now
-                            </div>
-                        ) : isBreakIncoming(
-                              getTimeUntilBreak() === 0 ? 1 : 0
-                          ) ? (
-                            <div
-                                className={`font-mono text-[70px] opacity-25 leading-none`}
-                            >
-                                {padTime(hours(displayGetTimeUntilBreak()))}:
-                                {padTime(minutes(displayGetTimeUntilBreak()))}:
-                                {padTime(seconds(displayGetTimeUntilBreak()))}
+                            <div className="opacity-25 font-mono text-[40px] md:text-[60px] lg:text-[70px] leading-none break-words text-center">Now</div>
+                        ) : isBreakIncoming(getTimeUntilBreak() === 0 ? 1 : 0) ? (
+                            <div className={`font-mono text-[40px] md:text-[60px] lg:text-[70px] opacity-25 leading-none break-words text-center`}>
+                                {padTime(hours(displayGetTimeUntilBreak()))}:{padTime(minutes(displayGetTimeUntilBreak()))}:{padTime(seconds(displayGetTimeUntilBreak()))}
                             </div>
                         ) : (
-                            <div className="opacity-25 font-mono text-[70px] text-center leading-none">
-                                -
-                            </div>
+                            <div className="opacity-25 font-mono text-[40px] md:text-[60px] lg:text-[70px] text-center leading-none break-words">-</div>
                         )}
                     </div>
                     {!onBreak ? (
-                        <div
-                            className={`font-mono text-[200px] leading-none ${
-                                getRoundTimeLeft() < 10000 ? "text-red-400" : ""
-                            } ${
-                                timer.state === TimerState.PAUSED
-                                    ? "text-neutral-400"
-                                    : ""
-                            }`}
+                        <div className={`font-mono text-[70px] md:text-[120px] lg:text-[180px] xl:text-[200px] leading-none truncate text-center ${getRoundTimeLeft() < 10000 ? "text-red-400" : ""} ${timer.state === TimerState.PAUSED ? "text-neutral-400" : ""}`}
                         >
-                            {padTime(minutes(getRoundTimeLeft()))}:
-                            {padTime(seconds(getRoundTimeLeft()))}
+                            {padTime(minutes(getRoundTimeLeft()))}:{padTime(seconds(getRoundTimeLeft()))}
                         </div>
                     ) : (
-                        <div
-                            className={`font-mono text-[200px] leading-none ${
-                                getBreakTimeLeft() < 10000
-                                    ? "text-red-400"
-                                    : "text-blue-400"
-                            } ${
-                                breakTimer.state === TimerState.PAUSED
-                                    ? "text-opacity-75"
-                                    : ""
-                            }`}
+                        <div className={`font-mono text-[70px] md:text-[120px] lg:text-[180px] xl:text-[200px] leading-none truncate text-center ${getBreakTimeLeft() < 10000 ? "text-red-400" : "text-blue-400"} ${breakTimer.state === TimerState.PAUSED ? "text-opacity-75" : ""}`}
                         >
-                            {padTime(minutes(getBreakTimeLeft()))}:
-                            {padTime(seconds(getBreakTimeLeft()))}
+                            {padTime(minutes(getBreakTimeLeft()))}:{padTime(seconds(getBreakTimeLeft()))}
                         </div>
                     )}
-                    <div
-                        className={`font-mono text-[70px] opacity-25 leading-none`}
-                    >
-                        {padTime(hours(timer.time))}:
-                        {padTime(minutes(timer.time))}:
-                        {padTime(seconds(timer.time))}
+                    <div className={`font-mono text-[30px] md:text-[50px] lg:text-[70px] opacity-25 leading-none truncate text-center`}>
+                        {padTime(hours(timer.time))}:{padTime(minutes(timer.time))}:{padTime(seconds(timer.time))}
                     </div>
-                    <div className="flex gap-2 mt-9">
+                    <div className="flex gap-4 mt-9 flex-wrap justify-center">
                         <Tooltip
                             text={
                                 onBreak
@@ -333,21 +320,23 @@ function BlindLevelCountdown() {
                                 onClick={() => {
                                     if (!onBreak) {
                                         const newLevel = Math.min(
-                                            state.blindStructure.structure
-                                                .length - 1,
+                                            state.blindStructure.structure.length - 1,
                                             blindLevel + 1
                                         );
+                                        const nextSmallBlind = state.blindStructure.structure[newLevel]?.[0];
+                                        if (onRequestBlindAdvance) {
+                                            const shouldAdvance = onRequestBlindAdvance(newLevel, nextSmallBlind);
+                                            if (shouldAdvance === false) return;
+                                        }
                                         setBlindLevel(newLevel);
                                         timer.setTime(
                                             newLevel *
-                                                state.blindStructure
-                                                    .roundLength *
+                                                state.blindStructure.roundLength *
                                                 60 *
                                                 1000
                                         );
                                     } else {
                                         setOnBreak(false);
-                                        // setBreakIdx((prev) => prev + 1);
                                         breakTimer.reset();
                                     }
                                 }}
@@ -377,161 +366,17 @@ function BlindLevelCountdown() {
                         </Tooltip>
                     </div>
                 </div>
-                {/* Blinds */}
-                <div className="flex flex-col gap-5">
-                    <div>
-                        <div className="text-2xl text-neutral-600 italic">
-                            Previous
-                        </div>
-                        {blindLevel > 0 ? (
-                            <div className="font-mono text-5xl text-neutral-500">
-                                <div className="gap-2">
-                                    <span>
-                                        {convertThousands(
-                                            state.blindStructure.structure[
-                                                blindLevel - 1
-                                            ][0]
-                                        )}
-                                    </span>
-                                </div>
-                                <div className="flex-items-end gap-2">
-                                    <span>
-                                        {convertThousands(
-                                            state.blindStructure.structure[
-                                                blindLevel - 1
-                                            ][1]
-                                        )}
-                                    </span>
-                                </div>
-                            </div>
-                        ) : (
-                            <span className="font-mono text-5xl text-neutral-600">
-                                <div>-</div>
-                                <div className="opacity-0">-</div>
-                            </span>
-                        )}
-                    </div>
-                    <div>
-                        <div className="flex items-end">
-                            <span className="text-4xl text-neutral-600">
-                                SB
-                            </span>
-                            <span className="font-mono text-9xl leading-none">
-                                {convertThousands(
-                                    state.blindStructure.structure[
-                                        blindLevel
-                                    ][0]
-                                )}
-                            </span>
-                        </div>
-                        <div className="flex">
-                            <span className="text-4xl text-neutral-600">
-                                BB
-                            </span>
-                            <span className="font-mono text-9xl">
-                                {convertThousands(
-                                    state.blindStructure.structure[
-                                        blindLevel
-                                    ][1]
-                                )}
-                            </span>
-                        </div>
-                    </div>
-                    <div>
-                        <div className="text-2xl text-neutral-600 italic">
-                            Next
-                        </div>
-                        {blindLevel + 1 <
-                        state.blindStructure.structure.length ? (
-                            <div className="font-mono text-5xl text-neutral-500">
-                                <div className="flex-items-end gap-2">
-                                    <span>
-                                        {convertThousands(
-                                            state.blindStructure.structure[
-                                                blindLevel + 1
-                                            ][0]
-                                        )}
-                                    </span>
-                                </div>
-                                <div className="flex-items-end gap-2">
-                                    <span>
-                                        {convertThousands(
-                                            state.blindStructure.structure[
-                                                blindLevel + 1
-                                            ][1]
-                                        )}
-                                    </span>
-                                </div>
-                            </div>
-                        ) : (
-                            <span className="text-5xl text-neutral-500">
-                                <div>END</div>
-                                <div className="opacity-0">{"-"}</div>
-                            </span>
-                        )}
-                    </div>
+                {/* Blinds bottom left */}
+                <div className="absolute left-0 bottom-0 mb-8 ml-8 flex flex-col items-start gap-2 z-20">
+                    <span className="text-2xl text-neutral-600">SB</span>
+                    <span className="font-mono text-5xl text-white">{convertThousands(state.blindStructure.structure[blindLevel][0])}</span>
+                    <span className="text-2xl text-neutral-600">BB</span>
+                    <span className="font-mono text-5xl text-white">{convertThousands(state.blindStructure.structure[blindLevel][1])}</span>
                 </div>
-                {/* Antes */}
-                <div className="flex flex-col gap-5">
-                    <div className="text-right">
-                        <div className="text-2xl text-neutral-600 italic">
-                            Previous
-                        </div>
-                        {blindLevel > 0 ? (
-                            <div className="font-mono text-5xl text-neutral-500">
-                                <div className="gap-2">
-                                    <span>
-                                        {convertThousands(
-                                            state.blindStructure.structure[
-                                                blindLevel - 1
-                                            ][2]
-                                        )}
-                                    </span>
-                                </div>
-                            </div>
-                        ) : (
-                            <span className="font-mono text-5xl text-neutral-600">
-                                <div>-</div>
-                            </span>
-                        )}
-                    </div>
-                    <div>
-                        <div className="flex justify-end items-center">
-                            <span className="font-mono text-9xl">
-                                {convertThousands(
-                                    state.blindStructure.structure[
-                                        blindLevel
-                                    ][2]
-                                )}
-                            </span>
-                            <span className="text-4xl text-neutral-600">
-                                ANTE
-                            </span>
-                        </div>
-                    </div>
-                    <div className="text-right">
-                        <div className="text-2xl text-neutral-600 italic">
-                            Next
-                        </div>
-                        {blindLevel + 1 <
-                        state.blindStructure.structure.length ? (
-                            <div className="font-mono text-5xl text-neutral-500">
-                                <div className="flex-items-end gap-2">
-                                    <span>
-                                        {convertThousands(
-                                            state.blindStructure.structure[
-                                                blindLevel + 1
-                                            ][2]
-                                        )}
-                                    </span>
-                                </div>
-                            </div>
-                        ) : (
-                            <span className="text-5xl text-neutral-500">
-                                END
-                            </span>
-                        )}
-                    </div>
+                {/* Ante bottom right */}
+                <div className="absolute right-0 bottom-0 mb-8 mr-8 flex flex-col items-end gap-2 z-20">
+                    <span className="text-2xl text-neutral-600">ANTE</span>
+                    <span className="font-mono text-5xl text-white">{convertThousands(state.blindStructure.structure[blindLevel][2])}</span>
                 </div>
             </div>
         </div>

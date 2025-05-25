@@ -35,14 +35,6 @@ function PayoutDisplay() {
                         compact
                     />
                 </div>
-                <div className="flex justify-between gap-5 mt-5 w-full">
-                    <IncrementInput
-                        label="Re-buys"
-                        min={0}
-                        onSubmit={(val) => setRebuys(val)}
-                    />
-                    <IncrementInput label="Add-ons" />
-                </div>
             </div>
             <div>
                 <h2 className="mb-4 font-bold text-4xl italic">BLINDS</h2>
