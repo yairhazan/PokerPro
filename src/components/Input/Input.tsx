@@ -8,9 +8,12 @@ type InputType = {
     value?: string;
     onChange?: (e: ChangeEvent<HTMLInputElement>) => void;
     unit?: string;
+    min?: number;
+    max?: number;
+    step?: number;
 };
 
-function Input({ type, value, onChange, unit }: InputType) {
+function Input({ type, value, onChange, unit, min, max, step }: InputType) {
     function getInput() {
         switch (type) {
             case "currency":
@@ -23,19 +26,23 @@ function Input({ type, value, onChange, unit }: InputType) {
             case "count":
                 return (
                     <CountInput
-                        step={1}
+                        step={step || 1}
                         unit={unit}
                         value={value}
                         onChange={onChange}
+                        min={min}
+                        max={max}
                     />
                 );
             case "float":
                 return (
                     <CountInput
-                        step={0.01}
+                        step={step || 0.01}
                         unit={unit}
                         value={value}
                         onChange={onChange}
+                        min={min}
+                        max={max}
                     />
                 );
             default:
@@ -43,6 +50,9 @@ function Input({ type, value, onChange, unit }: InputType) {
                     <TextInput
                         value={value}
                         onChange={onChange}
+                        min={min}
+                        max={max}
+                        step={step}
                     />
                 );
         }

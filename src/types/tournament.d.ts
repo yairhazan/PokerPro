@@ -5,6 +5,8 @@ declare type TournamentData = {
     currentRound: number;
     buyIn: number;
     rebuys: number;
+    playerRebuys: number[];
+    playerNames: string[];
     payoutStructure: PayoutStructure;
     blindStructure: BlindStructure;
 }

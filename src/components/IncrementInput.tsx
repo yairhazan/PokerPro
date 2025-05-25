@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BsCaretRightFill } from "react-icons/bs";
 
 type Props = {
@@ -7,11 +7,16 @@ type Props = {
     step?: number;
     min?: number;
     max?: number;
+    value?: number;
 };
 
-function IncrementInput({ label, onSubmit, step = 1, min, max }: Props) {
-    const [value, setValue] = useState<string>("0");
+function IncrementInput({ label, onSubmit, step = 1, min, max, value: initialValue = 0 }: Props) {
+    const [value, setValue] = useState<string>(initialValue.toString());
     const [hover, setHover] = useState<boolean>(false);
+
+    useEffect(() => {
+        setValue(initialValue.toString());
+    }, [initialValue]);
 
     function validate(val: number): number {
         val = min !== undefined ? Math.max(min, val) : val;

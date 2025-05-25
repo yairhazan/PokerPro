@@ -14,6 +14,8 @@ export type TournamentContextType = {
     setPlayersRemaining: (count: number) => void;
     setBuyIn: (amount: number) => void;
     setRebuys: (amount: number) => void;
+    setPlayerRebuys: (playerId: number, amount: number) => void;
+    setPlayerName: (playerId: number, name: string) => void;
     setPayoutCount: (count: number) => void;
     setPayoutPercentages: (percentages: number[]) => void;
     setBlindPreset: (name: string) => void;
@@ -46,6 +48,8 @@ function TournamentProvider({ children }: PropsWithChildren) {
     const [playersRemaining, setPlayersRemaining] = useState<number>(10);
     const [buyIn, setBuyIn] = useState<number>(20);
     const [rebuys, setRebuys] = useState<number>(0);
+    const [playerRebuys, setPlayerRebuys] = useState<number[]>(Array(playerCount).fill(0));
+    const [playerNames, setPlayerNames] = useState<string[]>(Array(playerCount).fill(""));
     const [currentRound, setCurrentRound] = useState<number>(0);
 
     const [payoutCount, setPayoutCount] = useState<number>(3);
@@ -65,6 +69,24 @@ function TournamentProvider({ children }: PropsWithChildren) {
     useEffect(() => {
         setTotalPayout(buyIn * (playerCount + rebuys));
     }, [playerCount, buyIn, rebuys]);
+
+    useEffect(() => {
+        setPlayerRebuys(Array(playerCount).fill(0));
+        setPlayerNames(Array(playerCount).fill(""));
+    }, [playerCount]);
+
+    const setPlayerRebuysHandler = (playerId: number, amount: number) => {
+        const newPlayerRebuys = [...playerRebuys];
+        newPlayerRebuys[playerId] = amount;
+        setPlayerRebuys(newPlayerRebuys);
+        setRebuys(newPlayerRebuys.reduce((sum, val) => sum + val, 0));
+    };
+
+    const setPlayerNameHandler = (playerId: number, name: string) => {
+        const newPlayerNames = [...playerNames];
+        newPlayerNames[playerId] = name;
+        setPlayerNames(newPlayerNames);
+    };
 
     const payoutStructure: PayoutStructure = {
         count: payoutCount,
@@ -89,6 +111,8 @@ function TournamentProvider({ children }: PropsWithChildren) {
         playersRemaining,
         buyIn,
         rebuys,
+        playerRebuys,
+        playerNames,
         payoutStructure,
         blindStructure,
         currentRound,
@@ -111,6 +135,8 @@ function TournamentProvider({ children }: PropsWithChildren) {
         setRebuys: (amount: number) => {
             setRebuys(amount);
         },
+        setPlayerRebuys: setPlayerRebuysHandler,
+        setPlayerName: setPlayerNameHandler,
         setPayoutCount: (amount: number) => {
             setPayoutCount(getNearestPayoutCount(amount));
         },

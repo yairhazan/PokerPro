@@ -5,9 +5,11 @@ type CountInputType = {
     onChange?: (e: ChangeEvent<HTMLInputElement>) => void;
     step: number;
     unit?: string;
+    min?: number;
+    max?: number;
 };
 
-function CountInput({ value, onChange, step, unit }: CountInputType) {
+function CountInput({ value, onChange, step, unit, min, max }: CountInputType) {
     let stepDecimals = (step + "").split(".")[1];
     if (stepDecimals === undefined) stepDecimals = "";
 
@@ -21,7 +23,8 @@ function CountInput({ value, onChange, step, unit }: CountInputType) {
         <div className="relative shadow-sm rounded-md">
             <input
                 type="number"
-                min={0}
+                min={min}
+                max={max}
                 step={step}
                 value={value}
                 onChange={onChange}
