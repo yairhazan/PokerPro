@@ -43,8 +43,12 @@ export interface Player {
   chips: number;
   seatNumber?: number;
   tableNumber?: number;
-  status: 'registered' | 'active' | 'eliminated';
+  status: 'registered' | 'active' | 'eliminated' | 'rebuied';
   registrationTime: Date;
+  rebuys: number;
+  lastRebuyTime?: Date;
+  eliminationTime?: Date;
+  totalInvestment: number; // buyIn + (rebuys * buyIn)
 }
 
 export interface TournamentState {

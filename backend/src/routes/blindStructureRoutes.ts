@@ -8,4 +8,5 @@ router.post('/generate', blindStructureController.generateBlindStructure);
 
 
 
+
 export default router; 

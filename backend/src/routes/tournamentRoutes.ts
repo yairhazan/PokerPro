@@ -21,5 +21,8 @@ router.post('/:id/timer/add-time', tournamentController.addTime);
 // Player management
 router.post('/:id/players', tournamentController.registerPlayer);
 router.patch('/:id/players/:playerId', tournamentController.updatePlayerStatus);
+router.post('/:id/players/:playerId/rebuy', tournamentController.addRebuy);
+router.post('/:id/players/:playerId/eliminate', tournamentController.eliminatePlayer);
+router.get('/:id/players/:playerId/rebuy-history', tournamentController.getPlayerRebuyHistory);
 
 export default router; 

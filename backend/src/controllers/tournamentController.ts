@@ -104,12 +104,102 @@ export const tournamentController = {
       ...req.body,
       chips: tournament.startingChips,
       status: 'registered',
-      registrationTime: new Date()
+      registrationTime: new Date(),
+      rebuys: 0,
+      totalInvestment: tournament.buyIn
     };
 
     tournament.players.push(player);
     tournament.updatedAt = new Date();
     res.status(201).json(player);
+  },
+
+  // Add rebuy for a player
+  addRebuy: (req: Request, res: Response) => {
+    const tournament = tournaments.find(t => t.id === req.params.id);
+    if (!tournament) {
+      return res.status(404).json({ error: 'Tournament not found' });
+    }
+
+    const player = tournament.players.find(p => p.id === req.params.playerId);
+    if (!player) {
+      return res.status(404).json({ error: 'Player not found' });
+    }
+
+    if (player.status === 'eliminated') {
+      return res.status(400).json({ error: 'Cannot rebuy eliminated player' });
+    }
+
+    // Add rebuy
+    player.rebuys++;
+    player.lastRebuyTime = new Date();
+    player.status = 'rebuied';
+    player.chips = tournament.startingChips;
+    player.totalInvestment += tournament.buyIn;
+
+    // Update tournament prize pool
+    tournament.prizePool += tournament.buyIn;
+    tournament.updatedAt = new Date();
+
+    res.json({
+      message: 'Rebuy added successfully',
+      player,
+      newChipCount: player.chips,
+      totalInvestment: player.totalInvestment
+    });
+  },
+
+  // Eliminate a player
+  eliminatePlayer: (req: Request, res: Response) => {
+    const tournament = tournaments.find(t => t.id === req.params.id);
+    if (!tournament) {
+      return res.status(404).json({ error: 'Tournament not found' });
+    }
+
+    const player = tournament.players.find(p => p.id === req.params.playerId);
+    if (!player) {
+      return res.status(404).json({ error: 'Player not found' });
+    }
+
+    if (player.status === 'eliminated') {
+      return res.status(400).json({ error: 'Player is already eliminated' });
+    }
+
+    // Eliminate player
+    player.status = 'eliminated';
+    player.eliminationTime = new Date();
+    player.chips = 0;
+
+    tournament.updatedAt = new Date();
+
+    res.json({
+      message: 'Player eliminated successfully',
+      player,
+      eliminationTime: player.eliminationTime
+    });
+  },
+
+  // Get player rebuy history
+  getPlayerRebuyHistory: (req: Request, res: Response) => {
+    const tournament = tournaments.find(t => t.id === req.params.id);
+    if (!tournament) {
+      return res.status(404).json({ error: 'Tournament not found' });
+    }
+
+    const player = tournament.players.find(p => p.id === req.params.playerId);
+    if (!player) {
+      return res.status(404).json({ error: 'Player not found' });
+    }
+
+    res.json({
+      playerId: player.id,
+      playerName: player.name,
+      rebuys: player.rebuys,
+      lastRebuyTime: player.lastRebuyTime,
+      totalInvestment: player.totalInvestment,
+      status: player.status,
+      currentChips: player.chips
+    });
   },
 
   // Start tournament
