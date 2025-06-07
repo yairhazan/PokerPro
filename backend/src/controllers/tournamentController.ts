@@ -99,9 +99,27 @@ export const tournamentController = {
       return res.status(400).json({ error: 'Tournament is full' });
     }
 
+    // Check for duplicate player name in the tournament
+    const playerName = req.body.name?.trim();
+    if (!playerName) {
+      return res.status(400).json({ error: 'Player name is required' });
+    }
+
+    const isDuplicateName = tournament.players.some(
+      p => p.name.toLowerCase() === playerName.toLowerCase()
+    );
+
+    if (isDuplicateName) {
+      return res.status(400).json({ 
+        error: 'A player with this name already exists in the tournament',
+        suggestion: `Try using "${playerName} (${tournament.players.length + 1})" or add a unique identifier`
+      });
+    }
+
     const player: Player = {
       id: Date.now().toString(),
       ...req.body,
+      name: playerName, // Use trimmed name
       chips: tournament.startingChips,
       status: 'registered',
       registrationTime: new Date(),
